@@ -75,7 +75,27 @@ export function $svg(qualifiedName, attributes)
 }
 
 /**
- * 
+ * @param {keyof HTMLElementTagNameMap} selectors
+ * @param {Record<keyof CSSStyleDeclaration, any>} styles 
+ */
+export function $style(selectors, styles)
+{
+    return $$(selectors).style(styles);
+}
+
+/**
+ * @param {ElementCSSInlineStyle} elem
+ * @param {Record<keyof CSSStyleDeclaration, any>} styles
+ */
+function setStyles(elem, styles)
+{
+    for(const property in styles)
+    {
+        elem.style[property] = styles[property];
+    }
+}
+
+/**
  * @param {Element} elem 
  * @param {Record<string, any>} attributes 
  */
@@ -83,13 +103,17 @@ function setAttributes(elem, attributes)
 {
     for(const key in attributes)
     {
+        if(key === 'style' && typeof attributes[key] === 'object')
+        {
+            setStyles(elem, attributes[key]);
+            continue;
+        }
         elem.setAttributeNS(null, key, attributes[key]);
     }
 }
 
 /**
  * @template {Element} E
- * @extends {Element}
  */
 class VQElement
 {
@@ -104,16 +128,12 @@ class VQElement
     constructor(element)
     {
         this.element = element;
-        for(let key in element)
-        {
-            if(['append', 'prepend', 'text'].includes(key))
-            {
-                console.log(key);
-                continue;
-            }
-            
-            this[key] = element[key];
-        }
+    }
+
+    click()
+    {
+        this.element.click();
+        return this;
     }
 
     text(txt)
@@ -129,13 +149,26 @@ class VQElement
         }
     }
 
+    html(html)
+    {
+        if(html)
+        {
+            this.element.innerHTML = html;
+            return this;
+        }
+        else
+        {
+            return this.element.innerHTML;
+        }
+    }
+
     /**
      * Alias for addEventListener
      * 
-     * @template {keyof ElementEventMap} K
+     * @template {keyof GlobalEventHandlersEventMap} K
      * 
      * @param {K} type 
-     * @param {(this: E, ev: ElementEventMap[K]) => any} listener 
+     * @param {(this: E, ev: GlobalEventHandlersEventMap[K]) => any} listener 
      * @param {boolean | AddEventListenerOptions} options 
      */
     on(type, listener, options)
@@ -147,10 +180,10 @@ class VQElement
     /**
      * Alias for removeEventListener
      * 
-     * @template {keyof ElementEventMap} K
+     * @template {keyof GlobalEventHandlersEventMap} K
      * 
      * @param {K} type 
-     * @param {(this: E, ev: ElementEventMap[K]) => any} listener 
+     * @param {(this: E, ev: GlobalEventHandlersEventMap[K]) => any} listener 
      * @param {boolean | EventListenerOptions} options
      */
     off(type, listener, options)
@@ -178,6 +211,16 @@ class VQElement
     }
 
     /**
+     * @param {Record<keyof CSSStyleDeclaration, any>} styles
+     */
+    style(styles)
+    {
+        setStyles(this.element, styles);
+
+        return this;
+    }
+
+    /**
      * @param  {string[]} tokens 
      */
     addClass(...tokens)
@@ -195,22 +238,50 @@ class VQElement
         return this;
     }
 
+    /**
+     * @param {string} token 
+     * @param {boolean} force 
+     */
     toggleClass(token, force)
     {
         return this.element.classList.toggle(token, force);
+    }
+
+    /**
+     * @param {string} token
+     */
+    hasClass(token)
+    {
+        return this.element.classList.contains(token)
     }
 }
 
 class VQElements
 {
-    #elements;
+    /**
+     * @type {Element[]}
+     */
+    elements;
 
     /**
      * @param {Element[]} elements 
      */
     constructor(elements)
     {
-        this.#elements = elements;
+        this.elements = elements;
+    }
+
+    /**
+     * @param {Record<keyof CSSStyleDeclaration, any>} styles
+     */
+    style(styles)
+    {
+        this.elements.forEach(elem =>
+        {
+            setStyles(elem, styles);
+        });
+
+        return this;
     }
 
     /**
@@ -224,7 +295,8 @@ class VQElements
      */
     on(type, listener, options)
     {
-        this.#elements.forEach(elem => elem.addEventListener(type, listener, options));
+        this.elements.forEach(elem => elem.addEventListener(type, listener, options));
+        return this;
     }
 
     /**
@@ -238,6 +310,13 @@ class VQElements
      */
     off(type, listener, options)
     {
-        this.#elements.forEach(elem => elem.removeEventListener(type, listener, options));
+        this.elements.forEach(elem => elem.removeEventListener(type, listener, options));
+        return this;
+    }
+
+    click()
+    {
+        this.elements.forEach(elem => elem.click());
+        return this;
     }
 }
