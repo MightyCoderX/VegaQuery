@@ -1,4 +1,4 @@
-import { $, $$, $id, $new, $svg } from './vega-query.js';
+import { $, $$, $id, $new, $svg } from './lib/vega-query.js';
 
 $$('a').on('click', e =>
 {
